@@ -45,3 +45,6 @@ htmlcov/
 
 # Claude Code 订阅令牌（docker compose 自动读取），禁止提交
 .env
+
+# 찐숏폼 제작 기록
+/shortform/done.txt
