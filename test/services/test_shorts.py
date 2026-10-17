@@ -80,3 +80,21 @@ def test_main_dry_run_does_not_touch_files(tmp_path, monkeypatch):
     assert shorts.main(["--keywords", str(keywords), "--dry-run"]) == 0
     assert keywords.read_text(encoding="utf-8") == "주제\n"
     assert not (tmp_path / "done.txt").exists()
+
+
+def test_run_chunk_forces_utf8_child_output(monkeypatch):
+    captured = {}
+
+    class Completed:
+        returncode = 0
+        stdout = 'log line\n{"tasks": []}\n'
+
+    def fake_run(command, **kwargs):
+        captured.update(kwargs)
+        return Completed()
+
+    monkeypatch.setattr(shorts.subprocess, "run", fake_run)
+
+    assert shorts._run_chunk("m.jsonl", []) == {"tasks": []}
+    assert captured["env"]["PYTHONIOENCODING"] == "utf-8"
+    assert captured["encoding"] == "utf-8"

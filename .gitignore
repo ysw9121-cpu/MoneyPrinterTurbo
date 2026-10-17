@@ -48,3 +48,4 @@ htmlcov/
 
 # 찐숏폼 제작 기록
 /shortform/done.txt
+/shortform/auto-run.log

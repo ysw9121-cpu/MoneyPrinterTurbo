@@ -102,6 +102,8 @@ def _run_chunk(manifest_path: str, cli_args: Sequence[str]) -> dict | None:
         stdout=subprocess.PIPE,
         text=True,
         encoding="utf-8",
+        # 윈도우에서 파이프 출력은 기본이 cp949라 한글 결과 JSON을 utf-8로 읽지 못한다.
+        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
     )
     try:
         return json.loads(completed.stdout.strip().splitlines()[-1])
