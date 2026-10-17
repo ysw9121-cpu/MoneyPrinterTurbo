@@ -1849,6 +1849,7 @@ support_locales = [
     "es-ES",
     "fr-FR",
     "it-IT",
+    "ko-KR",
     "ru-RU",
     "vi-VN",
     "th-TH",
