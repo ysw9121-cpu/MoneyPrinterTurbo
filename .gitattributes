@@ -14,3 +14,7 @@
 *.otf binary
 *.woff binary
 *.woff2 binary
+
+# 윈도우 배치 파일은 CRLF로 내려받아야 cmd가 라벨과 한글을 바르게 읽는다.
+shorts*.bat text eol=crlf
+schedule_shorts.bat text eol=crlf

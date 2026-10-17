@@ -60,3 +60,45 @@ Claude 구독(Pro/Max)이 있다면 API 키 대신 `llm_provider = "claude_code"
 | 주제 하나로 2개 버전 | `shorts.bat -- --video-count 2` |
 
 `--` 뒤에는 `cli.py`의 옵션을 그대로 쓸 수 있습니다 (`uv run python cli.py --help`).
+
+## 쇼츠·릴스·틱톡 자동 업로드
+
+원본에 들어 있는 Upload-Post 연동을 씁니다. 영상이 완성되면 바로 올라갑니다.
+
+1. https://upload-post.com 에 가입하고 유튜브·인스타그램·틱톡 계정을 연결합니다.
+2. Upload-Post에서 API 키와 사용자 이름(username)을 확인합니다.
+3. `config.toml`에서 아래 값을 바꿉니다.
+   ```toml
+   upload_post_enabled = true
+   upload_post_api_key = "발급받은 키"
+   upload_post_username = "Upload-Post 사용자 이름"
+   upload_post_platforms = ["youtube", "instagram", "tiktok"]
+   upload_post_auto_upload = true
+   upload_post_youtube_privacy_status = "public"   # 처음엔 "private"로 시험해 보세요
+   ```
+
+알아둘 점
+- 업로드는 영상 제작이 끝난 뒤 진행되고, 업로드가 다 끝나야 실행 창이 닫힙니다.
+- 한 번에 대기할 수 있는 업로드는 10개(`upload_post_max_pending_tasks`)입니다.
+  하루에 많이 만들 때는 이 숫자를 늘리거나 `--limit`로 편수를 줄이세요.
+- 업로드 결과는 `shortform\auto-run.log`(자동 실행) 또는 실행 창에서 확인합니다.
+
+## 매일 정해진 시각에 자동 제작 (윈도우)
+
+`schedule_shorts.bat`를 더블클릭하면 매일 오전 9시에 3편을 만드는 예약이 등록됩니다.
+시각과 편수를 바꾸려면 명령창에서 실행합니다.
+
+| 하고 싶은 것 | 명령 |
+|---|---|
+| 매일 09:00에 3편 | `schedule_shorts.bat` |
+| 매일 20:30에 5편 | `schedule_shorts.bat 20:30 5` |
+| 자동 제작 해제 | `schedule_shorts.bat off` |
+
+- 예약 시각에 컴퓨터가 켜져 있어야 합니다.
+- 결과는 `shortform\auto-run.log`와 `shortform\done.txt`에 남습니다.
+- `keywords.txt`의 주제가 다 떨어지면 아무것도 만들지 않습니다. 주제를 미리 넉넉히 적어두세요.
+
+맥/리눅스는 `crontab -e`에 다음 한 줄을 추가합니다 (매일 09:00, 3편).
+```
+0 9 * * * cd /설치경로/MoneyPrinterTurbo && sh shorts.sh --limit 3 >> shortform/auto-run.log 2>&1
+```
