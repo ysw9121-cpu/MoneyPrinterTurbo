@@ -15,6 +15,19 @@
 원본에 들어 있던 글꼴은 모두 한글을 지원하지 않아 한국어 자막이 □□□로 깨졌습니다.
 `resource/fonts/NotoSansKR-Bold.ttf`(SIL OFL 1.1, 상업적 사용 가능)를 추가해서 해결했습니다.
 
+## 맥 한 줄 설치
+
+터미널에 아래 한 줄을 붙여넣으면 설치, Pexels 키 저장, Claude 구독 로그인, 웹 화면 실행까지 한 번에 진행됩니다.
+
+```
+curl -fsSL https://raw.githubusercontent.com/ysw9121-cpu/MoneyPrinterTurbo/main/install_mac.sh | bash
+```
+
+- 프로그램은 `~/MoneyPrinterTurbo`에 설치됩니다.
+- 대본은 Claude 구독(Claude Code)으로 씁니다. API 키는 필요 없습니다.
+- 같은 줄을 다시 실행하면 최신 버전으로 업데이트되고, `config.toml`과 `keywords.txt`는 그대로 남습니다.
+- 다음부터 실행: `cd ~/MoneyPrinterTurbo && sh webui.sh`
+
 ## 처음 실행할 때
 
 1. `config.example.toml`이 `config.toml`로 자동 복사됩니다.
