@@ -297,6 +297,8 @@
     "ElevenLabs API Key": "ElevenLabs API 密钥（[点击获取](https://elevenlabs.io/app/settings/api-keys)）",
     "ElevenLabs Model": "ElevenLabs 模型",
     "Fish Audio API Key": "Fish Audio API 密钥（[点击获取](https://fish.audio/app/developers)）",
+    "Typecast API Key": "Typecast API 密钥（[点击获取](https://typecast.ai/developers/api)）",
+    "Typecast Emotion": "Typecast 情感",
     "Fish Audio Model": "Fish Audio 模型",
     "VoxCPM API Key": "ModelBest API 密钥（[点击获取](https://platform.modelbest.cn/console/keys)）",
     "VoxCPM Model ID": "VoxCPM 模型 ID",

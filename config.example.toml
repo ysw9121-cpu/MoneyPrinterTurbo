@@ -642,6 +642,16 @@ audio_format = "mp3"
 channel = 1
 pitch = 0
 
+[typecast]
+# Typecast TTS (Korean-friendly character voices). API plans are separate from
+# Typecast web subscriptions; get the key at https://typecast.ai/developers/api
+api_key = ""
+# "ssfm-v30" (recommended) or "ssfm-v21".
+model_id = "ssfm-v30"
+# normal, smart (infer emotion from context), happy, sad, angry, whisper,
+# toneup, or tonedown. Not every voice supports every preset.
+emotion = "normal"
+
 [elevenlabs]
 # API key: https://elevenlabs.io/app/settings/api-keys
 # Favorite voices in the ElevenLabs voice library are shown in the WebUI.

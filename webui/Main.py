@@ -232,6 +232,7 @@ _RUNTIME_CONFIG_SECTIONS = {
     "chatterbox": config.chatterbox,
     "kokoro": config.kokoro,
     "elevenlabs": config.elevenlabs,
+    "typecast": config.typecast,
     "minimax_tts": config.minimax_tts,
     "siliconflow": config.siliconflow,
     "fish_audio": config.fish_audio,
@@ -1485,6 +1486,8 @@ def _infer_tts_server_from_voice(voice_name):
         return "minimax-tts"
     if voice.is_elevenlabs_voice(voice_name):
         return "elevenlabs"
+    if voice.is_typecast_voice(voice_name):
+        return "typecast"
     if voice.is_chatterbox_voice(voice_name):
         return "chatterbox"
     if voice.is_kokoro_voice(voice_name):
@@ -6025,6 +6028,12 @@ def _get_voice_preview_provider_signature(tts_server: str) -> dict:
             "model_id": config.elevenlabs.get("model_id", ""),
             "credential": _credential_signature(config.elevenlabs.get("api_key", "")),
         }
+    if tts_server == "typecast":
+        return {
+            "model_id": config.typecast.get("model_id", ""),
+            "emotion": config.typecast.get("emotion", ""),
+            "credential": _credential_signature(voice.get_typecast_api_key()),
+        }
     if tts_server == "chatterbox":
         return {
             "base_url": config.chatterbox.get("base_url", ""),
@@ -6940,6 +6949,7 @@ def _render_audio_settings(panel, params):
                 ("mimo-tts", "Xiaomi MiMo TTS"),
                 ("minimax-tts", "MiniMax TTS"),
                 ("elevenlabs", "ElevenLabs TTS"),
+                ("typecast", "Typecast TTS"),
                 ("chatterbox", "Chatterbox TTS"),
                 ("kokoro", "Kokoro TTS"),
                 ("fish_audio", "Fish Audio TTS"),
@@ -6980,6 +6990,16 @@ def _render_audio_settings(panel, params):
             if tts_mode_enabled and selected_tts_server == "minimax-tts":
                 minimax_voices, minimax_voice_labels = _render_minimax_tts_settings()
 
+            # Typecast 音色目录需要 Key 才能读取，所以 Key 输入框放在音色列表之前。
+            if tts_mode_enabled and selected_tts_server == "typecast":
+                typecast_api_key = st.text_input(
+                    tr("Typecast API Key"),
+                    value=config.typecast.get("api_key", ""),
+                    type="password",
+                    key="typecast_api_key_input",
+                )
+                _set_runtime_config("typecast", "api_key", typecast_api_key.strip())
+
             # 根据选择的TTS服务器获取声音列表
             filtered_voices = []
             saved_voice_name = config.ui.get("voice_name", "")
@@ -7008,6 +7028,13 @@ def _render_audio_settings(panel, params):
                     st.session_state[cache_key] = voice.get_elevenlabs_voices(
                         saved_elevenlabs_api_key
                     )
+                filtered_voices = st.session_state[cache_key]
+            elif selected_tts_server == "typecast":
+                typecast_key = voice.get_typecast_api_key()
+                cache_key = f"typecast_voices_{_credential_signature(typecast_key)}"
+                # 空列表不缓存：Key 刚填好或网络暂时失败时，下一次 rerun 会重新拉取。
+                if not st.session_state.get(cache_key):
+                    st.session_state[cache_key] = voice.get_typecast_voices(typecast_key)
                 filtered_voices = st.session_state[cache_key]
             elif selected_tts_server == "chatterbox":
                 # 自托管 Chatterbox 服务的预置音色（来自 [chatterbox] voices 配置）
@@ -7042,6 +7069,12 @@ def _render_audio_settings(panel, params):
                 if voice.is_elevenlabs_voice(v):
                     parts = v.split(":", 2)
                     return parts[2] if len(parts) >= 3 else v
+                if voice.is_typecast_voice(v):
+                    parts = v.split(":", 2)
+                    label = parts[2] if len(parts) >= 3 else v
+                    return label.replace("-Female", f" ({tr('Female')})").replace(
+                        "-Male", f" ({tr('Male')})"
+                    )
                 if voice.is_chatterbox_voice(v) or voice.is_kokoro_voice(v):
                     name = v.split(":", 1)[1] if ":" in v else v
                     return name.replace("-Female", "").replace("-Male", "")
@@ -7238,6 +7271,21 @@ def _render_audio_settings(panel, params):
                     key="elevenlabs_model_select",
                 )
                 _set_runtime_config("elevenlabs", "model_id", elevenlabs_model)
+
+            if tts_mode_enabled and (
+                selected_tts_server == "typecast"
+                or (voice_name and voice.is_typecast_voice(voice_name))
+            ):
+                saved_typecast_emotion = config.typecast.get("emotion", "normal")
+                if saved_typecast_emotion not in voice.TYPECAST_EMOTIONS:
+                    saved_typecast_emotion = "normal"
+                typecast_emotion = stable_selectbox(
+                    tr("Typecast Emotion"),
+                    options=list(voice.TYPECAST_EMOTIONS),
+                    default_value=saved_typecast_emotion,
+                    key="typecast_emotion_select",
+                )
+                _set_runtime_config("typecast", "emotion", typecast_emotion)
 
             # Fish Audio API settings section
             if tts_mode_enabled and (

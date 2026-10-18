@@ -80,6 +80,15 @@ GEMINI_TTS_VOICES = (
 _MINIMAX_TTS_MAX_AUDIO_HEX_CHARS = 100 * 1024 * 1024
 _ELEVENLABS_TTS_MAX_AUDIO_BYTES = 50 * 1024 * 1024
 _ELEVENLABS_TTS_MAX_ERROR_BYTES = 4096
+TYPECAST_API_BASE = "https://api.typecast.ai"
+TYPECAST_DEFAULT_MODEL = "ssfm-v30"
+# ssfm-v30 preset emotions; "smart" lets Typecast infer emotion from context.
+TYPECAST_EMOTIONS = (
+    "normal", "smart", "happy", "sad", "angry", "whisper", "toneup", "tonedown",
+)
+# Typecast rejects texts over 2,000 characters per request.
+_TYPECAST_MAX_CHARS = 2000
+_TYPECAST_MAX_AUDIO_BYTES = 50 * 1024 * 1024
 VOXCPM_DEFAULT_BASE_URL = "https://api.modelbest.cn/v1"
 VOXCPM_DEFAULT_VOICE = "default"
 VOXCPM_REFERENCE_AUDIO_MAX_UPLOAD_BYTES = 20 * 1024 * 1024
@@ -258,6 +267,58 @@ def get_elevenlabs_voices(api_key: str) -> list[str]:
     except Exception as e:
         logger.warning(f"ElevenLabs voices fetch failed: {str(e)}")
         return []
+
+
+def get_typecast_voices(api_key: str) -> list[str]:
+    """Return ``typecast:{voice_id}:{name}-{Gender}`` entries for ssfm-v30 voices."""
+    if not api_key:
+        return []
+    try:
+        response = requests.get(
+            f"{TYPECAST_API_BASE}/v3/voices",
+            params={"model": config.typecast.get("model_id", TYPECAST_DEFAULT_MODEL)},
+            headers={"X-API-KEY": api_key},
+            timeout=(10, 20),
+            allow_redirects=False,
+        )
+        try:
+            if response.status_code != 200:
+                logger.warning(
+                    f"Typecast voices fetch failed with status {response.status_code}"
+                )
+                return []
+            data = response.json()
+        finally:
+            response.close()
+    except Exception as e:
+        logger.warning(f"Typecast voices fetch failed: {str(e)}")
+        return []
+    if not isinstance(data, list):
+        return []
+
+    result = []
+    seen = set()
+    for entry in data:
+        if not isinstance(entry, dict):
+            continue
+        voice_id = entry.get("voice_id")
+        names = entry.get("voice_name")
+        if isinstance(names, dict):
+            name = names.get("kor") or names.get("eng")
+        else:
+            name = names
+        if not isinstance(voice_id, str) or not voice_id or voice_id in seen:
+            continue
+        if not isinstance(name, str) or not name:
+            name = voice_id
+        seen.add(voice_id)
+        # ':' separates the id from the label, so keep it out of the label.
+        label = name.replace(":", " ")
+        gender = entry.get("gender")
+        if gender in ("female", "male"):
+            label = f"{label}-{gender.capitalize()}"
+        result.append(f"typecast:{voice_id}:{label}")
+    return sorted(result, key=lambda value: value.split(":", 2)[2])
 
 
 def get_chatterbox_voices() -> list[str]:
@@ -479,6 +540,16 @@ def get_elevenlabs_api_key() -> str:
     return configured_key or os.getenv("ELEVENLABS_API_KEY", "").strip()
 
 
+def is_typecast_voice(voice_name: str | None) -> bool:
+    return (voice_name or "").startswith("typecast:")
+
+
+def get_typecast_api_key() -> str:
+    """Config first, then ``TYPECAST_API_KEY`` as the deployment fallback."""
+    configured_key = str(config.typecast.get("api_key", "") or "").strip()
+    return configured_key or os.getenv("TYPECAST_API_KEY", "").strip()
+
+
 def is_chatterbox_voice(voice_name: str) -> bool:
     return (voice_name or "").startswith("chatterbox:")
 
@@ -534,6 +605,8 @@ def is_azure_v1_voice(voice_name: str | None) -> bool:
     if is_minimax_voice(name):
         return False
     if is_elevenlabs_voice(name):
+        return False
+    if is_typecast_voice(name):
         return False
     if is_chatterbox_voice(name):
         return False
@@ -712,6 +785,13 @@ def _single_tts(
         else:
             logger.error(f"Invalid elevenlabs voice name format: {voice_name}")
             return None
+    elif is_typecast_voice(voice_name):
+        # 格式: typecast:{voice_id}:{name}
+        parts = voice_name.split(":")
+        if len(parts) >= 2 and parts[1].strip():
+            return typecast_tts(text, parts[1].strip(), voice_file, voice_rate)
+        logger.error(f"Invalid typecast voice name format: {voice_name}")
+        return None
     elif is_chatterbox_voice(voice_name):
         # 格式: chatterbox:<voice>，voice 可带显示用的 -Female/-Male 后缀
         parts = voice_name.split(":", 1)
@@ -2631,6 +2711,195 @@ def elevenlabs_tts(
                 response.close()
 
     return None
+
+
+def split_typecast_text(text: str, max_chars: int = _TYPECAST_MAX_CHARS) -> list[str]:
+    """Split text into request-sized chunks, preferring sentence boundaries."""
+    text = (text or "").strip()
+    if len(text) <= max_chars:
+        return [text] if text else []
+    sentences = re.split(r"(?<=[.!?。！？\n])\s*", text)
+    chunks = []
+    current = ""
+    for sentence in sentences:
+        while len(sentence) > max_chars:
+            if current:
+                chunks.append(current)
+                current = ""
+            chunks.append(sentence[:max_chars])
+            sentence = sentence[max_chars:]
+        if not sentence:
+            continue
+        candidate = f"{current} {sentence}" if current else sentence
+        if len(candidate) <= max_chars:
+            current = candidate
+        else:
+            chunks.append(current)
+            current = sentence
+    if current:
+        chunks.append(current)
+    return [chunk.strip() for chunk in chunks if chunk.strip()]
+
+
+def _typecast_request_audio(
+    api_key: str, payload: dict, voice_id: str
+) -> bytes | None:
+    """POST one Typecast TTS request; retry only failures that cannot have been billed."""
+    non_retryable = {400, 401, 402, 403, 404, 422}
+    for attempt in range(3):
+        response = None
+        try:
+            logger.info(f"start typecast tts, voice_id: {voice_id}, try: {attempt + 1}")
+            response = requests.post(
+                f"{TYPECAST_API_BASE}/v1/text-to-speech",
+                json=payload,
+                headers={"X-API-KEY": api_key, "Content-Type": "application/json"},
+                timeout=120,
+                allow_redirects=False,
+            )
+            if response.status_code == 200:
+                audio = response.content
+                if not audio:
+                    logger.error("Typecast TTS returned no audio data")
+                    return None
+                if len(audio) > _TYPECAST_MAX_AUDIO_BYTES:
+                    logger.error("Typecast TTS audio exceeds the 50 MB limit")
+                    return None
+                return audio
+            error_text = response.text[:300]
+            if response.status_code in non_retryable:
+                logger.error(
+                    f"Typecast TTS failed (non-retryable) — voice_id: {voice_id}, "
+                    f"status: {response.status_code}, error: {error_text}"
+                )
+                return None
+            logger.error(
+                f"typecast tts failed with status {response.status_code}: {error_text}"
+            )
+            if response.status_code == 429:
+                time.sleep(2 * (attempt + 1))
+        except requests.exceptions.ConnectTimeout as e:
+            logger.warning(f"typecast tts could not connect, retrying: {e}")
+        except requests.exceptions.RequestException as e:
+            logger.error(
+                "typecast tts result is unconfirmed after a transport error; "
+                f"stop paid retries: {type(e).__name__}"
+            )
+            return None
+        finally:
+            if response is not None:
+                response.close()
+    return None
+
+
+def typecast_tts(
+    text: str,
+    voice_id: str,
+    voice_file: str,
+    voice_rate: float = 1.0,
+) -> Union[SubMaker, None]:
+    text = (text or "").strip()
+    if not text:
+        logger.error("Typecast TTS text is empty")
+        return None
+
+    api_key = get_typecast_api_key()
+    if not api_key:
+        logger.error("Typecast API key is not set")
+        return None
+
+    try:
+        tempo = float(voice_rate) if voice_rate is not None else 1.0
+    except (TypeError, ValueError, OverflowError):
+        tempo = float("nan")
+    if not math.isfinite(tempo) or not 0.5 <= tempo <= 2.0:
+        logger.error("Typecast speech speed must be a number from 0.5 to 2.0")
+        return None
+
+    model_id = config.typecast.get("model_id", TYPECAST_DEFAULT_MODEL) or TYPECAST_DEFAULT_MODEL
+    emotion = config.typecast.get("emotion", "normal") or "normal"
+    if emotion not in TYPECAST_EMOTIONS:
+        emotion = "normal"
+
+    chunks = split_typecast_text(text, _TYPECAST_MAX_CHARS)
+    ensure_file_path_exists(voice_file)
+    work_dir = os.path.dirname(os.path.abspath(voice_file))
+    chunk_paths = []
+    temp_path = None
+    try:
+        for index, chunk in enumerate(chunks):
+            if emotion == "smart":
+                prompt = {"emotion_type": "smart"}
+                if index > 0:
+                    prompt["previous_text"] = chunks[index - 1][-500:]
+                if index + 1 < len(chunks):
+                    prompt["next_text"] = chunks[index + 1][:500]
+            else:
+                prompt = {
+                    "emotion_type": "preset",
+                    "emotion_preset": emotion,
+                    "emotion_intensity": 1.0,
+                }
+            payload = {
+                "voice_id": voice_id,
+                "text": chunk,
+                "model": model_id,
+                "prompt": prompt,
+                "output": {"audio_format": "mp3", "audio_tempo": tempo},
+            }
+            audio = _typecast_request_audio(api_key, payload, voice_id)
+            if audio is None:
+                return None
+            descriptor, chunk_path = tempfile.mkstemp(
+                prefix=".typecast-tts-", suffix=".mp3", dir=work_dir
+            )
+            chunk_paths.append(chunk_path)
+            with os.fdopen(descriptor, "wb") as output:
+                output.write(audio)
+
+        if len(chunk_paths) == 1:
+            temp_path = chunk_paths.pop()
+        else:
+            from moviepy.audio.AudioClip import concatenate_audioclips
+
+            descriptor, temp_path = tempfile.mkstemp(
+                prefix=".typecast-tts-", suffix=".mp3", dir=work_dir
+            )
+            os.close(descriptor)
+            clips = [AudioFileClip(path) for path in chunk_paths]
+            try:
+                concatenate_audioclips(clips).write_audiofile(temp_path, logger=None)
+            finally:
+                for clip in clips:
+                    clip.close()
+
+        _validate_remote_tts_audio(temp_path)
+        audio_clip = AudioFileClip(temp_path)
+        try:
+            audio_duration = float(audio_clip.duration)
+        finally:
+            audio_clip.close()
+        if not math.isfinite(audio_duration) or audio_duration <= 0:
+            logger.error("Typecast TTS returned audio with invalid duration")
+            return None
+
+        os.replace(temp_path, voice_file)
+        temp_path = None
+        logger.success(f"typecast tts succeeded: {voice_file}")
+        return populate_legacy_submaker_with_full_text(
+            sub_maker=ensure_legacy_submaker_fields(SubMaker()),
+            text=text,
+            audio_duration_seconds=audio_duration,
+        )
+    except Exception as e:
+        logger.error(f"typecast tts failed: {str(e)}")
+        return None
+    finally:
+        for path in chunk_paths + ([temp_path] if temp_path else []):
+            try:
+                os.remove(path)
+            except OSError:
+                pass
 
 
 def _openai_compatible_tts(

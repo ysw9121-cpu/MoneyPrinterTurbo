@@ -267,6 +267,8 @@
     "ElevenLabs API Key": "ElevenLabs API 키 ([API 키 발급](https://elevenlabs.io/app/settings/api-keys))",
     "ElevenLabs Model": "ElevenLabs 모델",
     "Fish Audio API Key": "Fish Audio API 키 ([API 키 발급](https://fish.audio/app/developers))",
+    "Typecast API Key": "Typecast API 키 ([API 키 발급](https://typecast.ai/developers/api))",
+    "Typecast Emotion": "Typecast 감정",
     "VoxCPM API Key": "ModelBest API 키 ([API 키 발급](https://platform.modelbest.cn/console/keys))",
     "VoxCPM Model ID": "VoxCPM 모델 ID",
     "VoxCPM Model ID Placeholder": "ModelBest에서 speech_synthesis 모델 ID를 선택하세요",

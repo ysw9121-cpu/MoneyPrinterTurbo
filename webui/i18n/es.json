@@ -267,6 +267,8 @@
     "ElevenLabs API Key": "Clave API de ElevenLabs ([Obtener clave](https://elevenlabs.io/app/settings/api-keys))",
     "ElevenLabs Model": "Modelo de ElevenLabs",
     "Fish Audio API Key": "Clave API de Fish Audio ([Obtener clave](https://fish.audio/app/developers))",
+    "Typecast API Key": "Clave API de Typecast ([Obtener clave](https://typecast.ai/developers/api))",
+    "Typecast Emotion": "Emoción de Typecast",
     "VoxCPM API Key": "Clave API de ModelBest ([Obtener clave](https://platform.modelbest.cn/console/keys))",
     "VoxCPM Model ID": "ID del modelo VoxCPM",
     "VoxCPM Model ID Placeholder": "Selecciona un ID de modelo speech_synthesis en ModelBest",
