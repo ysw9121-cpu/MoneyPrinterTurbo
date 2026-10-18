@@ -297,6 +297,8 @@
     "ElevenLabs API Key": "ElevenLabs API Key ([Get API Key](https://elevenlabs.io/app/settings/api-keys))",
     "ElevenLabs Model": "ElevenLabs Model",
     "Fish Audio API Key": "Fish Audio API Key ([Get API Key](https://fish.audio/app/developers))",
+    "Typecast API Key": "Typecast API Key ([Get API Key](https://typecast.ai/developers/api))",
+    "Typecast Emotion": "Typecast Emotion",
     "Fish Audio Model": "Fish Audio Model",
     "VoxCPM API Key": "ModelBest API Key ([Get API Key](https://platform.modelbest.cn/console/keys))",
     "VoxCPM Model ID": "VoxCPM Model ID",

@@ -265,6 +265,8 @@
     "ElevenLabs API Key": "ElevenLabs API Anahtarı ([Anahtar al](https://elevenlabs.io/app/settings/api-keys))",
     "ElevenLabs Model": "ElevenLabs Modeli",
     "Fish Audio API Key": "Fish Audio API Anahtarı ([Anahtar al](https://fish.audio/app/developers))",
+    "Typecast API Key": "Typecast API Anahtarı ([Anahtar al](https://typecast.ai/developers/api))",
+    "Typecast Emotion": "Typecast duygusu",
     "VoxCPM API Key": "ModelBest API Anahtarı ([Anahtar al](https://platform.modelbest.cn/console/keys))",
     "VoxCPM Model ID": "VoxCPM Model Kimliği",
     "VoxCPM Model ID Placeholder": "ModelBest'te bir speech_synthesis model kimliği seçin",
