@@ -116,3 +116,20 @@ Claude 구독(Pro/Max)이 있다면 API 키 대신 `llm_provider = "claude_code"
 ```
 0 9 * * * cd /설치경로/MoneyPrinterTurbo && sh shorts.sh --limit 3 >> shortform/auto-run.log 2>&1
 ```
+
+## 민담·야담 AI 그림 설정 (한 번에 적용)
+
+무료 영상 대신 대본 장면마다 AI 그림을 만들고 천천히 확대해 영상으로 씁니다.
+
+1. 웹 화면을 끕니다 (프로그램 터미널에서 `Control + C`).
+2. 터미널에서 실행합니다.
+   ```
+   cd ~/MoneyPrinterTurbo && uv run python presets.py folktale
+   ```
+   OpenAI API 키를 물으면 붙여넣습니다 (화면에는 보이지 않습니다).
+3. 웹 화면을 다시 켭니다: `sh webui.sh`
+
+바뀌는 것: 영상 소스 `openai_image`(gpt-image-1), 조선 민담 화풍 프롬프트,
+대본 순서대로 장면 배치, 문단 4개(약 1분), 이야기꾼 말투 요청, 장면당 5초.
+그림은 OpenAI API 요금이 장당 부과됩니다. 화풍은 설정 → 소재 소스 설정의
+프롬프트 템플릿에서 바꿀 수 있습니다.
