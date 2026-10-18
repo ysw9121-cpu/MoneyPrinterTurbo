@@ -25,6 +25,7 @@ curl -fsSL https://raw.githubusercontent.com/ysw9121-cpu/MoneyPrinterTurbo/main/
 
 - 프로그램은 `~/MoneyPrinterTurbo`에 설치됩니다.
 - 대본은 Claude 구독(Claude Code)으로 씁니다. API 키는 필요 없습니다.
+- 영상 소스 키는 Pexels나 Pixabay 중 하나만 있으면 됩니다. Pexels가 새 키 발급을 멈춘 경우 https://pixabay.com/api/docs/ 에서 Pixabay 키를 받으세요. Pixabay 키만 넣으면 영상 소스가 Pixabay로 자동 설정됩니다.
 - 같은 줄을 다시 실행하면 최신 버전으로 업데이트되고, `config.toml`과 `keywords.txt`는 그대로 남습니다.
 - 다음부터 실행: `cd ~/MoneyPrinterTurbo && sh webui.sh`
 

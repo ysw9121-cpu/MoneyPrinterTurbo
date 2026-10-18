@@ -98,3 +98,22 @@ def test_run_chunk_forces_utf8_child_output(monkeypatch):
     assert shorts._run_chunk("m.jsonl", []) == {"tasks": []}
     assert captured["env"]["PYTHONIOENCODING"] == "utf-8"
     assert captured["encoding"] == "utf-8"
+
+
+def test_build_cli_command_uses_configured_video_source(tmp_path, monkeypatch):
+    monkeypatch.setattr(shorts, "ROOT_DIR", str(tmp_path))
+    (tmp_path / "config.toml").write_text(
+        '[app]\nvideo_source = "pixabay"\n', encoding="utf-8"
+    )
+
+    command = shorts.build_cli_command("m.jsonl", [])
+    assert command[-2:] == ["--video-source", "pixabay"]
+
+    command = shorts.build_cli_command("m.jsonl", ["--video-source", "local"])
+    assert command.count("--video-source") == 1
+
+
+def test_build_cli_command_without_config_keeps_cli_default(tmp_path, monkeypatch):
+    monkeypatch.setattr(shorts, "ROOT_DIR", str(tmp_path))
+
+    assert "--video-source" not in shorts.build_cli_command("m.jsonl", [])

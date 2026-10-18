@@ -55,6 +55,19 @@ if grep -q '^pexels_api_keys = \[\]' config.toml; then
     echo "Pexels 키를 저장했습니다."
   fi
 fi
+# Pexels가 새 키 발급을 멈춘 경우가 있어 Pixabay도 받는다. Pexels 키가 없으면 Pixabay를 영상 소스로 쓴다.
+if grep -q '^pixabay_api_keys = \[\]' config.toml; then
+  ask "Pixabay API 키를 붙여넣고 엔터 (없으면 그냥 엔터): "
+  pixabay_key="$(printf '%s' "$REPLY" | tr -cd 'A-Za-z0-9-')"
+  if [ -n "$pixabay_key" ]; then
+    replace_line "s/^pixabay_api_keys = \[\]/pixabay_api_keys = [\"$pixabay_key\"]/" config.toml
+    echo "Pixabay 키를 저장했습니다."
+  fi
+fi
+if grep -q '^pexels_api_keys = \[\]' config.toml && ! grep -q '^pixabay_api_keys = \[\]' config.toml; then
+  replace_line 's/^video_source = "pexels"/video_source = "pixabay"/' config.toml
+  echo "영상 소스를 Pixabay로 설정했습니다."
+fi
 
 echo "[5/6] Claude Code 확인"
 if ! command -v claude >/dev/null 2>&1; then
