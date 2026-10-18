@@ -24,6 +24,7 @@ import json
 import os
 import subprocess
 import sys
+import tomllib
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Sequence
@@ -82,7 +83,19 @@ def build_cli_command(manifest_path: str, cli_args: Sequence[str]) -> list[str]:
     ]
     if not _has_option(cli_args, "--video-language"):
         command += ["--video-language", DEFAULT_LANGUAGE]
+    # cli.py의 --video-source 기본값은 pexels로 고정이라 config.toml 설정을 직접 넘긴다.
+    video_source = configured_video_source()
+    if video_source and not _has_option(cli_args, "--video-source"):
+        command += ["--video-source", video_source]
     return command + list(cli_args)
+
+
+def configured_video_source() -> str:
+    try:
+        with open(os.path.join(ROOT_DIR, "config.toml"), "rb") as file:
+            return str(tomllib.load(file).get("app", {}).get("video_source") or "")
+    except (OSError, tomllib.TOMLDecodeError):
+        return ""
 
 
 def _read_lines(path: str) -> list[str]:
